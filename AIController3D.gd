@@ -1,12 +1,11 @@
 extends AIController3D
 
-# Contar os passos/forçar um reset
+# Contar os pulos/forçar um reset
 func _physics_process(_delta):
 	n_steps += 1
 	if n_steps >= reset_after:
 		done = true
 		needs_reset = true
-
 	if needs_reset:
 		_player.game_over()
 
@@ -14,11 +13,11 @@ func _physics_process(_delta):
 func get_obs():
 	var goal_distance = 0.0
 	var goal_position = Vector3.ZERO
-	if _player.next == 0:
+	if _player.next == 0: # estado atual
 		goal_distance = _player.position.distance_to(_player.first_jump_pad.position)
 		goal_position = _player.first_jump_pad.global_position
 
-	if _player.next == 1:
+	if _player.next == 1: # objetivo
 		goal_distance = _player.position.distance_to(_player.second_jump_pad.position)
 		goal_position = _player.second_jump_pad.global_position
 
