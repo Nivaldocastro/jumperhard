@@ -29,29 +29,32 @@ var move_action := 0.0
 var turn_action := 0.0
 var jump_action := false
 
-
+# Conecta o AIController ao Player
 func _ready():
 	ai_controller.init(self)
 	raycast_sensor.activate()
 	game_over()
 
-
+# Controla o comportamento do player
 func _physics_process(_delta):
-	move_vec = get_move_vec()
+	## Movimento do player
+	move_vec = get_move_vec() # Para onde o Player deve se mover?
 	move_vec = move_vec.rotated(Vector3(0, 1, 0), rotation.y)
-	move_vec *= MOVE_SPEED
+	move_vec *= MOVE_SPEED # velocidade
 	move_vec.y = y_velo
 	set_velocity(move_vec)
 	set_up_direction(Vector3(0, 1, 0))
 	move_and_slide()
 
 	# turning
-
+	## Rotação do player
 	var turn_vec = get_turn_vec()
 	rotation.y += deg_to_rad(turn_vec * TURN_SENS)
 
+	## verifica se está no chão
 	grounded = is_on_floor()
 
+	## gravidade e pulo
 	y_velo -= GRAVITY
 	if grounded and get_jump_action():
 		robot.set_animation("jump")
@@ -65,6 +68,7 @@ func _physics_process(_delta):
 	if y_velo < 0 and !grounded:
 		robot.set_animation("falling")
 
+	## velocidade horizontal
 	var horizontal_speed = Vector2(move_vec.x, move_vec.z)
 	if horizontal_speed.length() < 0.1 and grounded:
 		robot.set_animation("idle")
@@ -73,12 +77,13 @@ func _physics_process(_delta):
 	elif horizontal_speed.length() >= 1.0 and grounded:
 		robot.set_animation("run")
 
+	## atualização da recompensa
 	update_reward()
 
 	if Input.is_action_just_pressed("r_key"):
 		game_over()
 
-
+# determinar a direção do movimento do Player
 func get_move_vec() -> Vector3:
 	if ai_controller.done:
 		return Vector3.ZERO
@@ -99,7 +104,7 @@ func get_move_vec() -> Vector3:
 		)
 	)
 
-
+# Rotação do player
 func get_turn_vec() -> float:
 	if ai_controller.heuristic == "model":
 		return turn_action
@@ -109,7 +114,7 @@ func get_turn_vec() -> float:
 
 	return rotation_amount
 
-
+ # retorna um valor booleano true ou false (pular ou não pular)
 func get_jump_action() -> bool:
 	if ai_controller.done:
 		jump_action = false
@@ -120,7 +125,7 @@ func get_jump_action() -> bool:
 
 	return Input.is_action_just_pressed("jump")
 
-
+# encerra a tentativa atual e se prepara para comceçar uma nova tentativa
 func game_over():
 	next = 1
 	first_jump_pad.position = Vector3.ZERO
@@ -144,9 +149,9 @@ func update_reward():
 func shaping_reward():
 	var s_reward = 0.0
 	var goal_distance = 0
-	if next == 0:
+	if next == 0: # estado atual
 		goal_distance = position.distance_to(first_jump_pad.position)
-	if next == 1:
+	if next == 1: # objetivo
 		goal_distance = position.distance_to(second_jump_pad.position)
 	#print(goal_distance)
 # Ficou mais perto do objetivo ganha uma recompensa	
@@ -164,7 +169,7 @@ func reset_best_goal_distance():
 	if next == 1:
 		best_goal_distance = position.distance_to(second_jump_pad.position)
 
-
+# calcula aleatoriamente uma nova posição para um Jump Pad
 func calculate_translation(other_pad_translation: Vector3) -> Vector3:
 	var new_translation := Vector3.ZERO
 	var distance = randf_range(12, 16)
