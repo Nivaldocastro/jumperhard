@@ -34,33 +34,45 @@ var tempo_decorrido := 0.0
 var pulos_realizados := 0
 # salvando em csv
 var numero_episodio := 0
-var arquivo_csv: FileAccess
+var chamadas_game_over := 0
 var caminho_csv := "user://metricas_treinamento.csv"
-var nome_treinamento := "treino_atual"
+var nome_treinamento := "800k"
+var nome_ambiente := ""
 
 # Conecta o AIController ao Player
 func _ready():
+	nome_ambiente = get_parent().name
+
+	print("================================")
+	print("PLAYER INICIADO")
+	print("ID: ", get_instance_id())
+	print("NODE: ", get_path())
+	print("PARENT: ", get_parent().name)
+	print("AMBIENTE: ", nome_ambiente)
+	print("================================")
+
 	ai_controller.init(self)
 	raycast_sensor.activate()
 
-	if FileAccess.file_exists(caminho_csv):
-		arquivo_csv = FileAccess.open(caminho_csv, FileAccess.READ_WRITE)
+	preparar_csv()
 
-		if arquivo_csv != null:
-			arquivo_csv.seek_end()
-
-	else:
-		arquivo_csv = FileAccess.open(caminho_csv, FileAccess.WRITE)
-
-		if arquivo_csv != null:
-			arquivo_csv.store_line(
-				"treinamento,episodio,plataformas_alcancadas,tempo_sobrevivido,pulos_realizados"
-			)
-			arquivo_csv.flush()
 	print("CAMINHO DO CSV: ", caminho_csv)
 	print("CAMINHO ABSOLUTO: ", ProjectSettings.globalize_path(caminho_csv))
 
 	game_over()
+
+# preparar o CSV
+func preparar_csv():
+	if FileAccess.file_exists(caminho_csv):
+		return
+
+	var arquivo = FileAccess.open(caminho_csv, FileAccess.WRITE)
+
+	if arquivo != null:
+		arquivo.store_line(
+            "treinamento,ambiente,episodio,plataformas_alcancadas,tempo_sobrevivido,pulos_realizados"
+		)
+		arquivo.close()
 
 # Controla o comportamento do player
 func _physics_process(delta):
@@ -156,20 +168,44 @@ func get_jump_action() -> bool:
 	return Input.is_action_just_pressed("jump")
 
 func salvar_episodio():
-	if arquivo_csv != null:
-		arquivo_csv.store_line(
-			"%s,%d,%d,%.2f,%d" % [
-				nome_treinamento,
-				numero_episodio,
-				plataformas_alcancadas,
-				tempo_decorrido,
-				pulos_realizados
-			]
-		)
-		arquivo_csv.flush()
+	print(">>> TENTANDO SALVAR EPISÓDIO: ", numero_episodio)
+	print(">>> AMBIENTE: ", nome_ambiente)
+
+	var arquivo = FileAccess.open(caminho_csv, FileAccess.READ_WRITE)
+
+	if arquivo == null:
+		print(">>> ERRO AO ABRIR CSV: ", FileAccess.get_open_error())
+		return
+
+	arquivo.seek_end()
+
+	var linha = "%s,%s,%d,%d,%.2f,%d" % [
+		nome_treinamento,
+		nome_ambiente,
+		numero_episodio,
+		plataformas_alcancadas,
+		tempo_decorrido,
+		pulos_realizados
+	]
+
+	print(">>> LINHA: ", linha)
+
+	arquivo.store_line(linha)
+	arquivo.flush()
+	arquivo.close()
+
+	print(">>> EPISÓDIO SALVO!")
 
 # encerra a tentativa atual e se prepara para começar uma nova tentativa
 func game_over():
+
+	chamadas_game_over += 1
+
+	print("############################")
+	print("GAME OVER CHAMADO: ", chamadas_game_over)
+	print("EPISÓDIO ATUAL: ", numero_episodio)
+	print("############################")
+
 
 	# Salva o episódio que acabou
 	if numero_episodio > 0:
@@ -248,7 +284,10 @@ func calculate_translation(other_pad_translation: Vector3) -> Vector3:
 
 # O agente recebe +100 de recompensa quando alcança a plataforma
 
-func _on_First_Pad_Trigger_body_entered(_body):
+func _on_First_Pad_Trigger_body_entered(body):
+	if body != self:
+		return
+
 	if next != 0:
 		return
 	plataformas_alcancadas += 1
@@ -257,7 +296,10 @@ func _on_First_Pad_Trigger_body_entered(_body):
 	reset_best_goal_distance()
 	second_jump_pad.position = calculate_translation(first_jump_pad.position)
 
-func _on_Second_Trigger_body_entered(_body):
+func _on_Second_Trigger_body_entered(body):
+	if body != self:
+		return
+	
 	if next != 1:
 		return
 	plataformas_alcancadas += 1
@@ -268,6 +310,12 @@ func _on_Second_Trigger_body_entered(_body):
 
 
 # Ao cair acontece o reset
-func _on_ResetTriggerBox_body_entered(_body):
+func _on_ResetTriggerBox_body_entered(body):
+	if body != self:
+		return
+
+	if ai_controller.done:
+		return
+
 	ai_controller.done = true
 	game_over()
