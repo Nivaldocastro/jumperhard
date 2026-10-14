@@ -349,4 +349,5 @@ JumperHard/
 ├── metricas_treinamento.csv
 └── README.md
 ```
+O obsetivo dessa organização é conseguir pegar os melhores resultados de cada treinamento e aplicar para realizar um novo treinamento, isso para evitar overfit
 
